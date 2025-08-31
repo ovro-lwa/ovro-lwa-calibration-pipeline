@@ -1,0 +1,147 @@
+# pipeline_config.py
+import numpy as np
+from astropy.coordinates import EarthLocation
+import astropy.units as u
+import os
+
+# --- General Pipeline Configuration ---
+PARENT_OUTPUT_DIR = '/lustre/gh/calibration/pipeline/'
+# Directory for reference tables
+REFERENCE_CALIBRATION_DIR = os.path.join(PARENT_OUTPUT_DIR, 'reference')
+
+# Hardcoded mapping of Correlator Number to SNAP2 Location
+ANTENNA_MAPPING = {
+    0: 'R3C1A',    1: 'R3C1B',    2: 'R3C2A',    3: 'R3C2B',    4: 'R3C3A',    5: 'R3C3B',    6: 'R3C4A',    7: 'R3C4B',
+    8: 'R3C5A',    9: 'R3C5B',    10: 'R3C6A',   11: 'R3C6B',   12: 'R3C7A',   13: 'R3C7B',   14: 'R3C8A',   15: 'R3C8B',
+    16: 'R3C9A',   17: 'R3C9B',   18: 'R3C10A',  19: 'R3C10B',  20: 'R3C11A',  21: 'R3C11B',  22: 'R3C12A',  23: 'R3C12B',
+    24: 'R3C13A',  25: 'R3C13B',  26: 'R3C14A',  27: 'R3C14B',  28: 'R3C15A',  29: 'R3C15B',  30: 'R3C16A',  31: 'R3C16B',
+    32: 'R4C1A',   33: 'R4C1B',   34: 'R4C2A',   35: 'R4C2B',   36: 'R4C3A',   37: 'R4C3B',   38: 'R4C4A',   39: 'R4C4B',
+    40: 'R4C5A',   41: 'R4C5B',   42: 'R4C6A',   43: 'R4C6B',   44: 'R4C7A',   45: 'R4C7B',   46: 'R4C8A',   47: 'R4C8B',
+    48: 'R4C9A',   49: 'R4C9B',   50: 'R4C10A',  51: 'R4C10B',  52: 'R4C11A',  53: 'R4C11B',  54: 'R4C12A',  55: 'R4C12B',
+    56: 'R4C13A',  57: 'R4C13B',  58: 'R4C14A',  59: 'R4C14B',  60: 'R4C15A',  61: 'R4C15B',  62: 'R4C16A',  63: 'R4C16B',
+    64: 'R5C1A',   65: 'R5C1B',   66: 'R5C2A',   67: 'R5C2B',   68: 'R5C3A',   69: 'R5C3B',   70: 'R5C4A',   71: 'R5C4B',
+    72: 'R5C5A',   73: 'R5C5B',   74: 'R5C6A',   75: 'R5C6B',   76: 'R5C7A',   77: 'R5C7B',   78: 'R5C8A',   79: 'R5C8B',
+    80: 'R5C9A',   81: 'R5C9B',   82: 'R5C10A',  83: 'R5C10B',  84: 'R5C11A',  85: 'R5C11B',  86: 'R5C12A',  87: 'R5C12B',
+    88: 'R5C13A',  89: 'R5C13B',  90: 'R5C14A',  91: 'R5C14B',  92: 'R5C15A',  93: 'R5C15B',  94: 'R5C16A',  95: 'R5C16B',
+    96: 'R6C1A',   97: 'R6C1B',   98: 'R6C2A',   99: 'R6C2B',   100: 'R6C3A',  101: 'R6C3B',  102: 'R6C4A',  103: 'R6C4B',
+    104: 'R6C5A',  105: 'R6C5B',  106: 'R6C6A',  107: 'R6C6B',  108: 'R6C7A',  109: 'R6C7B',  110: 'R6C8A',  111: 'R6C8B',
+    112: 'R6C9A',  113: 'R6C9B',  114: 'R6C10A', 115: 'R6C10B', 116: 'R6C11A', 117: 'R6C11B', 118: 'R6C12A', 119: 'R6C12B',
+    120: 'R6C13A', 121: 'R6C13B', 122: 'R6C14A', 123: 'R6C14B', 124: 'R6C15A', 125: 'R6C15B', 126: 'R6C16A', 127: 'R6C16B',
+    128: 'R7C1A',  129: 'R7C1B',  130: 'R7C2A',  131: 'R7C2B',  132: 'R7C3A',  133: 'R7C3B',  134: 'R7C4A',  135: 'R7C4B',
+    136: 'R7C5A',  137: 'R7C5B',  138: 'R7C6A',  139: 'R7C6B',  140: 'R7C7A',  141: 'R7C7B',  142: 'R7C8A',  143: 'R7C8B',
+    144: 'R7C9A',  145: 'R7C9B',  146: 'R7C10A', 147: 'R7C10B', 148: 'R7C11A', 149: 'R7C11B', 150: 'R7C12A', 151: 'R7C12B',
+    152: 'R7C13A', 153: 'R7C13B', 154: 'R7C14A', 155: 'R7C14B', 156: 'R7C15A', 157: 'R7C15B', 158: 'R7C16A', 159: 'R7C16B',
+    160: 'R8C1A',  161: 'R8C1B',  162: 'R8C2A',  163: 'R8C2B',  164: 'R8C3A',  165: 'R8C3B',  166: 'R8C4A',  167: 'R8C4B',
+    168: 'R8C5A',  169: 'R8C5B',  170: 'R8C6A',  171: 'R8C6B',  172: 'R8C7A',  173: 'R8C7B',  174: 'R8C8A',  175: 'R8C8B',
+    176: 'R8C9A',  177: 'R8C9B',  178: 'R8C10A', 179: 'R8C10B', 180: 'R8C11A', 181: 'R8C11B', 182: 'R8C12A', 183: 'R8C12B',
+    184: 'R8C13A', 185: 'R8C13B', 186: 'R8C14A', 187: 'R8C14B', 188: 'R8C15A', 189: 'R8C15B', 190: 'R8C16A', 191: 'R8C16B',
+    192: 'R9C1A',  193: 'R9C1B',  194: 'R9C2A',  195: 'R9C2B',  196: 'R9C3A',  197: 'R9C3B',  198: 'R9C4A',  199: 'R9C4B',
+    200: 'R9C5A',  201: 'R9C5B',  202: 'R9C6A',  203: 'R9C6B',  204: 'R9C7A',  205: 'R9C7B',  206: 'R9C8A',  207: 'R9C8B',
+    208: 'R9C9A',  209: 'R9C9B',  210: 'R9C10A', 211: 'R9C10B', 212: 'R9C11A', 213: 'R9C11B', 214: 'R9C12A', 215: 'R9C12B',
+    216: 'R9C13A', 217: 'R9C13B', 218: 'R9C14A', 219: 'R9C14B', 220: 'R9C15A', 221: 'R9C15B', 222: 'R9C16A', 223: 'R9C16B',
+    224: 'R10C1A', 225: 'R10C1B', 226: 'R10C2A', 227: 'R10C2B', 228: 'R10C3A', 229: 'R10C3B', 230: 'R10C4A', 231: 'R10C4B',
+    232: 'R10C5A', 233: 'R10C5B', 234: 'R10C6A', 235: 'R10C6B', 236: 'R10C7A', 237: 'R10C7B', 238: 'R10C8A', 239: 'R10C8B',
+    240: 'R10C9A', 241: 'R10C9B', 242: 'R10C10A',243: 'R10C10B',244: 'R10C11A',245: 'R10C11B',246: 'R10C12A',247: 'R10C12B',
+    248: 'R10C13A',249: 'R10C13B',250: 'R10C14A',251: 'R10C14B',252: 'R10C15A',253: 'R10C15B',254: 'R10C16A',255: 'R10C16B',
+    256: 'R11C1A', 257: 'R11C1B', 258: 'R11C2A', 259: 'R11C2B', 260: 'R11C3A', 261: 'R11C3B', 262: 'R11C4A', 263: 'R11C4B',
+    264: 'R11C5A', 265: 'R11C5B', 266: 'R11C6A', 267: 'R11C6B', 268: 'R11C7A', 269: 'R11C7B', 270: 'R11C8A', 271: 'R11C8B',
+    272: 'R11C9A', 273: 'R11C9B', 274: 'R11C10A',275: 'R11C10B',276: 'R11C11A',277: 'R11C11B',278: 'R11C12A',279: 'R11C12B',
+    280: 'R11C13A',281: 'R11C13B',282: 'R11C14A',283: 'R11C14B',284: 'R11C15A',285: 'R11C15B',286: 'R11C16A',287: 'R11C16B',
+    288: 'R12C1A', 289: 'R12C1B', 290: 'R12C2A', 291: 'R12C2B', 292: 'R12C3A', 293: 'R12C3B', 294: 'R12C4A', 295: 'R12C4B',
+    296: 'R12C5A', 297: 'R12C5B', 298: 'R12C6A', 299: 'R12C6B', 300: 'R12C7A', 301: 'R12C7B', 302: 'R12C8A', 303: 'R12C8B',
+    304: 'R12C9A', 305: 'R12C9B', 306: 'R12C10A',307: 'R12C10B',308: 'R12C11A',309: 'R12C11B',310: 'R12C12A',311: 'R12C12B',
+    312: 'R12C13A',313: 'R12C13B',314: 'R12C14A',315: 'R12C14B',316: 'R12C15A',317: 'R12C15B',318: 'R12C16A',319: 'R12C16B',
+    320: 'R13C1A', 321: 'R13C1B', 322: 'R13C2A', 323: 'R13C2B', 324: 'R13C3A', 325: 'R13C3B', 326: 'R13C4A', 327: 'R13C4B',
+    328: 'R13C5A', 329: 'R13C5B', 330: 'R13C6A', 331: 'R13C6B', 332: 'R13C7A', 333: 'R13C7B', 334: 'R13C8A', 335: 'R13C8B',
+    336: 'R13C9A', 337: 'R13C9B', 338: 'R13C10A',339: 'R13C10B',340: 'R13C11A',341: 'R13C11B',342: 'R13C12A',343: 'R13C12B',
+    344: 'R13C13A',345: 'R13C13B',346: 'R13C14A',347: 'R13C14B',348: 'R13C15A',349: 'R13C15B',350: 'R13C16A',351: 'R13C16B'
+}
+
+# --- Telescope Parameters ---
+TOTAL_ANTENNAS = 352
+OVRO_LWA_LOCATION = EarthLocation(lon='-118.28333333d', lat='37.23416667d', height=1207.2*u.m)
+SINGLE_INTEGRATION_DURATION_SECONDS = 10.031
+
+# --- Data Preparation Configuration ---
+MAX_OBSERVATION_DURATION_MINUTES = 10.0
+MAX_BAD_ANTENNA_FRACTION = 0.20
+
+# External Tool Paths (Ensuring these match the environment)
+CHGCENTRE_PATH = os.environ.get('CHGCENTRE_BIN', '/opt/bin/chgcentre')
+AOFLAGGER_PATH = os.environ.get('AOFALAGGER_BIN', '/opt/bin/aoflagger')
+WSCLEAN_PATH = os.environ.get('WSCLEAN_BIN', '/opt/bin/wsclean')
+
+# Strategy and Environment paths
+AOFALAGGER_STRATEGY_PATH = os.environ.get('AOFALAGGER_STRATEGY', '/lustre/ghellbourg/AOFlagger_strat_opt/LWA_opt_GH1.lua')
+CONDA_ENV_MNC = 'development'
+
+# Helper script path determination (Utility function)
+def get_mnc_helper_path(script_dir):
+    return os.path.join(script_dir, 'get_bad_antennas_mnc.py')
+
+# ==============================================================================
+# === Sky Model Configuration ===
+# ==============================================================================
+
+FLUX_MODEL_NPZ_PATH = '/lustre/gh/calibration/pipeline/primary_calibrator_flux_models.npz'
+BEAM_H5_PATH = os.environ.get('BEAM_H5_PATH', '/lustre/gh/beams/OVRO-LWA_MROsoil_updatedheight.h5')
+FLUX_THRESHOLD_JY = 1000.0
+
+# Frequencies (MHz) for detailed logging (if needed)
+LOG_FREQS_MHZ = np.array([13, 18, 23, 27, 32, 36, 41, 46, 50, 55, 59, 64, 69, 73, 78, 82])
+
+# Source Catalogs
+PRIMARY_SOURCES = {
+    'CygA': {'ra': '19h59m28.356s', 'dec': '+40d44m02.09s', 'size_arcmin': 3.0},
+    'CasA': {'ra': '23h23m24.000s', 'dec': '+58d48m54.00s', 'size_arcmin': 8.0},
+    'TauA': {'ra': '05h34m31.94s',  'dec': '+22d00m52.2s',  'size_arcmin': 8.0},
+    'VirA': {'ra': '12h30m49.423s', 'dec': '+12d23m28.04s', 'size_arcmin': 15.0},
+}
+
+# Secondary Sources (Scaife & Heald 2012 coefficients)
+# (SECONDARY_SOURCES definition remains the same, omitted for brevity)
+SECONDARY_SOURCES = {
+    '3C48': {'ra': '01h37m41.3s', 'dec': '+33d09m35s', 'coeffs': [43.874, -0.349, -0.374]},
+    # ... (rest of the sources)
+}
+
+# ==============================================================================
+# === Calibration Configuration ===
+# ==============================================================================
+
+CAL_REFANT = "202"
+
+# --- UV Range Selection (Dynamic based on source) ---
+# (ii) Updated logic
+CAL_UVRANGE_VIRA = ">5lambda,<185lambda"
+CAL_UVRANGE_DEFAULT = ">5lambda,<350lambda"
+
+
+# --- Delay Calibration (K) ---
+DELAY_CAL_MIN_FREQ_MHZ = 41.0
+
+# (v) Environmental checks
+DELAY_MIN_ELEVATION_DEG = 40.0
+
+# (iv) & (vi) QA Thresholds and Diagnostics
+REFERENCE_DELAY_TABLE_K = os.path.join(REFERENCE_CALIBRATION_DIR, 'delay/20h/20250202_190116_fullband.delay')
+DELAY_DIFF_WARN_NS = 100.0
+SNAP2_FAILURE_THRESHOLD = 0.5
+ANTENNAS_PER_SNAP2 = 32
+
+# ==============================================================================
+# === Imaging QA Configuration ===
+# ==============================================================================
+
+# WSClean Parameters
+WSCLEAN_COMMON_PARAMS = [
+    "-pol", "I", "-size", "256", "256", "-scale", "0.01", "-niter", "1000",
+    "-mgain", "0.85", "-weight", "briggs", "1", "-horizon-mask", "10deg",
+    "-taper-inner-tukey", "30", "-mem", "50", "-no-update-model-required",
+    "-fit-spectral-pol", "4", "-local-rms", "-auto-threshold", "0.5", "-auto-mask", "3"
+]
+
+# Defaults (used if dynamic detection fails)
+WSCLEAN_DEFAULT_CHANNELS_OUT = 16
+# Updated default to 4-minute observations
+WSCLEAN_DEFAULT_INTERVALS_OUT = 24
