@@ -147,16 +147,6 @@ WSCLEAN_FULLSKY_PARAMS = {
     'mem': 50, 'local-rms': True, 'taper-inner-tukey': 3, 'auto-threshold': 0.5, 'auto-mask': 3,
     'join-channels': True,
 }
-RFI_CLIFF_CLEAN_FREQ_RANGE_MHZ = (40.0, 60.0)
-RFI_CLIFF_THRESHOLD_SIGMA = 25.0
-RFI_CLIFF_WINDOW_CHANS = 20
-OUTLIER_FLAG_SIGMA = 3.0
-OUTLIER_FLAG_ITERATIONS = 20
-OUTLIER_ANTENNA_SIGMA = 5.0
-OUTLIER_ANTENNA_FREQ_RANGE_MHZ = (40.0, 60.0)
-NARROW_RFI_SCATTER_SIGMA = 3.0
-NARROW_RFI_KURTOSIS_SIGMA = 3.0
-NARROW_RFI_LOCAL_WINDOW_CHANS = 21
 
 # --- NEW Bandpass Flagging Constants (from test_bp_flagging.py) ---
 # Step 0: Normalization
@@ -174,9 +164,8 @@ DEVIATION_FLAG_SIGMA = 7.0
 GAIN_OUTLIER_SIGMA = 7.0
 
 # Step 5: Iterative outlier flagging (re-using OUTLIER_FLAG_SIGMA/ITERATIONS)
-# OUTLIER_FLAG_SIGMA = 3.0 (Already defined above)
-# OUTLIER_FLAG_ITERATIONS = 20 (Already defined above)
-# Using 15 as per test script
+# OUTLIER_FLAG_SIGMA = 3.0 
+# OUTLIER_FLAG_ITERATIONS = 20 
 BP_ITERATIVE_OUTLIER_FLAG_ITERATIONS = 15
 BP_ITERATIVE_OUTLIER_FLAG_SIGMA = 3.0
 
