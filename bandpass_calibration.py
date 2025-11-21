@@ -161,7 +161,7 @@ def _consolidate_ranges(indices):
     ranges.append((start, end))
     return ranges
 
-# --- REPLACED: flag_data_cubes from test_bp_flagging.py ---
+# --- REPLACED: flag_data_cubes from test_bp_flagging_ANDREA_v1.py ---
 # --- (and adapted to use pipeline_config) ---
 def flag_data_cubes(gains, flags, freqs_hz):
     new_flags = flags.copy()
@@ -235,16 +235,15 @@ def flag_data_cubes(gains, flags, freqs_hz):
     else:
         logger.warning("Not enough data in clean range to perform scatter-based RFI flagging.")
 
-    # --- Step 2: Create robust template (UNCHANGED) ---
-    # Note: This step correctly uses the *original* 'amplitudes'
+    # --- Step 2: Create robust template (MODIFIED: Uses NORMALIZED amplitudes) ---
     logger.info(f"--- Step 2: Creating robust bandpass template ---")
     
     median_template = np.zeros(n_chan)
     valid_template_channels = ~scatter_flags_per_channel # Channels NOT flagged in step 1
     
     for i in channel_indices[valid_template_channels]:
-        # Uses original amplitudes
-        unflagged_amps = amplitudes[i, ~new_flags[i, :, :]] # Use current flags
+        # *** USES NORMALIZED AMPLITUDES ***
+        unflagged_amps = normalized_amplitudes[i, ~new_flags[i, :, :]] # Use current flags
         if len(unflagged_amps) > 0:
             median_template[i] = np.median(unflagged_amps)
 
@@ -254,13 +253,14 @@ def flag_data_cubes(gains, flags, freqs_hz):
     if len(valid_indices) > 1 and len(invalid_indices) > 0:
          logger.info(f"Interpolating template over {len(invalid_indices)} scatter-flagged channels.")
          median_template[invalid_indices] = np.interp(invalid_indices, valid_indices, median_template[valid_indices])
+         # Ensure template is positive
          median_template[median_template <= 0] = np.min(median_template[median_template > 0]) if np.any(median_template > 0) else 1.0 
     elif len(valid_indices) <= 1:
         logger.warning("Cannot interpolate template - too few valid channels. Using non-interpolated template.")
-        median_template[median_template <= 0] = 1.0
+        median_template[median_template <= 0] = 1.0 # Ensure positivity
     else:
         logger.info("No scatter-flagged channels to interpolate over in template.")
-        median_template[median_template <= 0] = 1.0
+        median_template[median_template <= 0] = 1.0 # Ensure positivity
 
     if SCIPY_AVAILABLE and len(valid_indices) > config.TEMPLATE_SMOOTHING_KERNEL_SIZE:
          logger.info(f"Smoothing template with median filter (kernel={config.TEMPLATE_SMOOTHING_KERNEL_SIZE}).")
@@ -277,12 +277,12 @@ def flag_data_cubes(gains, flags, freqs_hz):
         logger.warning("Not enough valid channels to smooth template.")
 
 
-    # --- Step 3: Flag deviations from the template (UNCHANGED) ---
-    # Note: This step correctly uses the *original* 'amplitudes'
+    # --- Step 3: Flag deviations from the template (MODIFIED: Uses NORMALIZED amplitudes) ---
     logger.info(f"--- Step 3: Flagging per-antenna deviations from template (sigma={config.DEVIATION_FLAG_SIGMA}) ---")
     total_deviation_flags = 0
     
-    residuals = np.abs(amplitudes - median_template[:, np.newaxis, np.newaxis])
+    # Calculate residuals relative to the template, USING NORMALIZED AMPLITUDES
+    residuals = np.abs(normalized_amplitudes - median_template[:, np.newaxis, np.newaxis])
     
     for i in range(n_ant):
         if np.all(new_flags[:, i, :]): continue 
@@ -306,7 +306,7 @@ def flag_data_cubes(gains, flags, freqs_hz):
 
     logger.info(f"Step 3 complete. Flagged {total_deviation_flags} solutions deviating from the template.")
 
-    # --- Step 4: Flag whole-antenna gain outliers (UNCHANGED) ---
+    # --- Step 4: Flag whole-antenna gain outliers (UNCHANGED: Uses raw AMPLITUDES) ---
     # Note: This step correctly uses the *original* 'amplitudes'
     logger.info(f"--- Step 4: Flagging whole-antenna gain outliers (sigma={config.GAIN_OUTLIER_SIGMA}) ---")
     
@@ -352,8 +352,7 @@ def flag_data_cubes(gains, flags, freqs_hz):
         logger.warning("Not enough data in clean range to perform gain-outlier flagging.")
     logger.info(f"Step 4 complete. Flagged {flagged_ant_count} total antenna/pols for bad gain.")
     
-    # --- Step 5: Iterative Sigma Clipping (UNCHANGED) ---
-    # Note: This step correctly uses the *original* 'amplitudes'
+    # --- Step 5: Iterative Sigma Clipping (MODIFIED: Uses NORMALIZED amplitudes) ---
     sigma_threshold = config.BP_ITERATIVE_OUTLIER_FLAG_SIGMA
     n_iterations = config.BP_ITERATIVE_OUTLIER_FLAG_ITERATIONS
     if sigma_threshold and sigma_threshold > 0:
@@ -366,8 +365,8 @@ def flag_data_cubes(gains, flags, freqs_hz):
                 if np.all(new_flags[chan_idx, :, :]):
                     continue
                 for pol_idx in range(n_pol):
-                    # Uses original amplitudes
-                    amps_this_chan = amplitudes[chan_idx, :, pol_idx]
+                    # *** USES NORMALIZED AMPLITUDES ***
+                    amps_this_chan = normalized_amplitudes[chan_idx, :, pol_idx]
                     flags_this_chan = new_flags[chan_idx, :, pol_idx]
                     unflagged_amps = amps_this_chan[~flags_this_chan]
                     
@@ -438,7 +437,8 @@ def summarize_and_plot_flags(caltable_path, initial_flags, final_flags, freqs_hz
     
     # --- MODIFICATION: Find console handler and suppress verbose log ---
     console_handler = None
-    for handler in logging.getLogger('OVRO_Pipeline').handlers: # Get root logger
+    # Dynamically find the console handler from the root logger
+    for handler in logging.getLogger('OVRO_Pipeline').handlers:
         if isinstance(handler, logging.StreamHandler) and handler.stream in (sys.stdout, sys.stderr):
             console_handler = handler
             break
@@ -464,14 +464,19 @@ def summarize_and_plot_flags(caltable_path, initial_flags, final_flags, freqs_hz
         plot_filename = os.path.join(qa_dir, plot_basename)
         
         flag_matrix = np.any(newly_flagged, axis=2)
-        plt.figure(figsize=(12, 8))
+        # MODIFIED: Figure size increased
+        plt.figure(figsize=(12, 14))
         plt.imshow(flag_matrix.T, aspect='auto', origin='lower',
                    cmap='binary', interpolation='none',
                    extent=[freqs_hz[0]/1e6, freqs_hz[-1]/1e6, antennas[0]-0.5, antennas[-1]+0.5])
         plt.title(f'Newly Flagged Bandpass Solutions ({os.path.basename(caltable_path)})')
         plt.ylabel('Antenna Correlator Number'); plt.xlabel('Frequency (MHz)')
+        # MODIFIED: Ticks every 5 antennas
+        y_tick_positions = np.arange(antennas[0], antennas[-1]+1, 5)
+        plt.yticks(y_tick_positions)
         plt.grid(alpha=0.2)
-        plt.savefig(plot_filename)
+        # MODIFIED: DPI increased
+        plt.savefig(plot_filename, dpi=200)
         logger.info(f"Flag summary plot saved to: {plot_filename}")
         plt.close()
     except Exception as e:
