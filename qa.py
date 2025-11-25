@@ -570,6 +570,26 @@ def generate_image_snapshot(fits_path_or_hdu, output_jpg_path, stats, fit_result
             hdul.close()
         plt.close('all')
 
+        
+def run_bdsf(fits_path):
+    """ Run source detection with pybdsf.
+    fits_path is the path to the all-sky FITS image
+    """
+
+    import bdsf  # TODO: we should move this outside the function
+    img = bdsf.process_image(fits_path)
+    fluxes = np.array([src.total_flux for src in img.sources])
+    print(f"Found {len(fluxes)} sources with fluxes from {fluxes.min()} to {fluxes.max()}")
+    if write_csv:
+        csv_path = fits_path.replace('.fits', '.pybdsf.gaul')
+        print(f"Writing {csv_path}")
+        img.write_catalog(format='csv')
+        return csv_path
+# TODO: maybe define some QA metric on source list
+#    else:
+#        return fluxes
+    
+        
 def run_imfit_imstat(fits_file, context, is_cube=False):
     """
     MODIFIED: Now accepts `is_cube` hint to run imstat correctly.
