@@ -31,6 +31,42 @@ try:
 except ImportError:
     _reportlab_available = False
 
+# ---- ReportLab md5 compatibility (Python<3.9 / OpenSSL quirks) ----
+_REPORTLAB_MD5_PATCHED = False
+
+def _patch_reportlab_md5(logger):
+    global _REPORTLAB_MD5_PATCHED
+    if _REPORTLAB_MD5_PATCHED or not _reportlab_available:
+        return
+
+    try:
+        import hashlib
+        from reportlab.pdfbase import pdfdoc
+        from reportlab.lib import utils as rl_utils
+
+        def _safe_md5(*args, **kwargs):
+            kwargs.pop("usedforsecurity", None)
+            return hashlib.md5(*args, **kwargs)
+
+        # Patch only if the called function rejects usedforsecurity=
+        try:
+            pdfdoc.md5(usedforsecurity=False)
+        except TypeError:
+            logger.info("Patching reportlab.pdfbase.pdfdoc.md5 to ignore 'usedforsecurity'.")
+            pdfdoc.md5 = _safe_md5
+
+        try:
+            rl_utils.md5(b"test", usedforsecurity=False)
+        except TypeError:
+            logger.info("Patching reportlab.lib.utils.md5 to ignore 'usedforsecurity'.")
+            rl_utils.md5 = _safe_md5
+
+        _REPORTLAB_MD5_PATCHED = True
+
+    except ImportError as e:
+        logger.warning(f"ReportLab present but patch imports failed: {e}")
+    except Exception as e:
+        logger.warning(f"Could not apply ReportLab md5 patches (PDFs may still fail): {e}", exc_info=True)
 
 # Matplotlib configuration
 try:
@@ -61,6 +97,8 @@ CASACORE_TABLES_AVAILABLE = pipeline_utils.CASACORE_TABLES_AVAILABLE
 # Initialize logger
 logging.getLogger('matplotlib').setLevel(logging.WARNING)
 logger = pipeline_utils.get_logger('QA')
+_patch_reportlab_md5(logger)
+
 
 # Attempt to import casacore.tables specifically for QA table reading
 if CASACORE_TABLES_AVAILABLE:
@@ -1125,36 +1163,6 @@ def generate_pdf_report(context, results_dfs):
     if not _reportlab_available:
         logger.warning("ReportLab library not found. Skipping PDF report generation.")
         return
-    
-    # --- PATCH: make ReportLab's md5 ignore 'usedforsecurity' everywhere ---
-    try:
-        import hashlib
-        from reportlab.pdfbase import pdfdoc
-        from reportlab.lib import utils as rl_utils
-
-        def _safe_md5(*args, **kwargs):
-            # ReportLab calls md5(usedforsecurity=False) and md5(data, usedforsecurity=False)
-            kwargs.pop('usedforsecurity', None)
-            return hashlib.md5(*args, **kwargs)
-
-        # Patch pdfdoc.md5 if it doesn't like 'usedforsecurity'
-        try:
-            pdfdoc.md5(usedforsecurity=False)
-        except TypeError:
-            logger.info("Patching reportlab.pdfbase.pdfdoc.md5 to ignore 'usedforsecurity'.")
-            pdfdoc.md5 = _safe_md5
-
-        # Patch reportlab.lib.utils.md5 if it doesn't like 'usedforsecurity'
-        try:
-            # utils.md5 normally expects data as first arg
-            rl_utils.md5(b"test", usedforsecurity=False)
-        except TypeError:
-            logger.info("Patching reportlab.lib.utils.md5 to ignore 'usedforsecurity'.")
-            rl_utils.md5 = _safe_md5
-
-    except Exception as e:
-        logger.warning(f"Could not apply ReportLab md5 patches (PDFs may still fail): {e}")
-    # --- END PATCH ---
 
     logger.info("--- Generating PDF Summary Report ---")
     # MODIFIED: Get directories from context
